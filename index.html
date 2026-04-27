@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>門板模擬器</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Door Design Visualizer</p>
+        <h1>彩燿門 × UV局部彩繪點綴模擬器</h1>
+        <p class="hero-text">
+          操作流程：先選門板底色，再挑選局部點綴樣式，中央即時預覽完整套用效果。
+        </p>
+      </div>
+    </header>
+
+    <section class="top-base-bar">
+      <div class="top-base-bar-copy">
+        <p class="section-kicker">Step 1</p>
+        <h2>門板底色</h2>
+      </div>
+      <div id="baseOptions" class="base-pill-list" aria-label="門板底色選單"></div>
+    </section>
+
+    <main class="simulator-layout">
+      <aside class="controls-panel style-sidebar">
+        <div class="control-heading">
+          <p class="section-kicker">Step 2</p>
+          <h2>局部點綴樣式</h2>
+          <p class="helper-text">挑選後立即套用到中央完整門板預覽。</p>
+        </div>
+        <div id="overlayModeOptions" class="segmented-control style-mode-control" aria-label="局部點綴類型">
+          <button class="segment-button is-active" type="button" data-overlay-mode="pattern">圖案</button>
+          <button class="segment-button" type="button" data-overlay-mode="line">線條</button>
+        </div>
+        <div id="lineColorOptions" class="accessory-color-list line-color-list" aria-label="線條顏色"></div>
+        <div id="overlayOptions" class="style-grid" aria-label="局部點綴樣式選單"></div>
+      </aside>
+
+      <section class="preview-panel main-preview">
+        <div class="preview-header">
+          <div>
+            <p class="section-kicker">即時預覽</p>
+            <h2 id="selectionTitle">白梣 x 無點綴</h2>
+          </div>
+          <div class="preview-actions">
+            <button class="ghost-button" id="resetButton" type="button">清除局部點綴</button>
+            <button class="ghost-button" id="clearAllAccessoriesButton" type="button">清除全部配件</button>
+            <button class="ghost-button strong-action" id="exportPngButton" type="button">下載成圖片</button>
+          </div>
+        </div>
+
+        <div class="door-stage full-preview">
+          <div class="door-frame full-door">
+            <img id="baseImage" class="door-layer fit-contain" alt="門板底圖">
+            <img id="overlayImage" class="door-layer overlay fit-contain" alt="門板局部點綴">
+            <div id="accessoryCanvas" class="accessory-canvas" aria-label="門板配件圖層"></div>
+            <div id="emptyOverlayBadge" class="empty-overlay-badge">目前僅顯示底色</div>
+          </div>
+          <div class="door-size-note">
+            <span>門板比例示意</span>
+            <strong>尺寸：70.3×200CM</strong>
+          </div>
+        </div>
+
+        <div class="selection-summary">
+          <div>
+            <span>底色</span>
+            <strong id="baseLabel">白梣</strong>
+          </div>
+          <div>
+            <span>局部點綴</span>
+            <strong id="overlayLabel">無點綴</strong>
+          </div>
+          <div>
+            <span>配件</span>
+            <strong id="accessoryLabel">無配件</strong>
+          </div>
+        </div>
+      </section>
+
+      <aside class="controls-panel accessory-sidebar">
+        <div class="control-heading">
+          <p class="section-kicker">Step 3</p>
+          <h2>配件</h2>
+          <button class="ghost-button compact-button" id="clearAccessoryButton" type="button">刪除選取</button>
+        </div>
+        <div class="accessory-controls">
+          <div id="accessoryTypeOptions" class="segmented-control" aria-label="配件類別"></div>
+          <div id="accessoryColorOptions" class="accessory-color-list" aria-label="配件顏色"></div>
+          <div class="position-panel" aria-label="配件位置調整">
+            <span>位置 / 旋轉</span>
+            <div id="positionControls" class="position-controls">
+              <button type="button" data-move="up">上</button>
+              <button type="button" data-move="left">左</button>
+              <button type="button" data-move="center">置中</button>
+              <button type="button" data-move="right">右</button>
+              <button type="button" data-move="down">下</button>
+              <button type="button" data-move="rotate-left">左轉</button>
+              <button type="button" data-move="rotate-reset">0°</button>
+              <button type="button" data-move="rotate-right">右轉</button>
+            </div>
+          </div>
+          <div id="accessoryOptions" class="accessory-grid" aria-label="配件款式"></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="catalog.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
