@@ -24,9 +24,102 @@ body {
     linear-gradient(135deg, #ece4d7 0%, #f6f1e9 45%, #e3d4c0 100%);
 }
 
+body.auth-loading .page-shell,
+body.is-locked .page-shell,
+body.is-authorized .auth-gate {
+  display: none;
+}
+
+body.auth-loading .auth-gate,
+body.is-locked .auth-gate {
+  display: grid;
+}
+
 img {
   display: block;
   max-width: 100%;
+}
+
+.auth-gate {
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 250, 244, 0.94);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.auth-card h1 {
+  font-size: clamp(1.8rem, 5vw, 2.35rem);
+}
+
+.auth-copy {
+  margin: 12px 0 20px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.auth-form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--text);
+  background: #fffaf4;
+  font: inherit;
+  outline: none;
+}
+
+.auth-form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(155, 107, 61, 0.14);
+}
+
+.auth-submit {
+  margin-top: 4px;
+  border: 1px solid rgba(111, 72, 33, 0.28);
+  border-radius: 999px;
+  padding: 12px 18px;
+  color: #fffaf4;
+  background: linear-gradient(135deg, #9b6b3d, #6b4322);
+  box-shadow: 0 12px 28px rgba(92, 58, 28, 0.2);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-message {
+  min-height: 1.4em;
+  margin: 16px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.auth-message[data-type="error"] {
+  color: #9f3428;
+}
+
+.auth-message[data-type="success"] {
+  color: #4f6b2d;
 }
 
 .page-shell {
@@ -54,6 +147,13 @@ img {
   padding: 18px 22px;
   border-radius: 18px;
   width: 100%;
+}
+
+.hero-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .top-base-bar {

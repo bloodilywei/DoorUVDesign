@@ -6,11 +6,30 @@
   <title>門板模擬器</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <div class="page-shell">
+<body class="auth-loading">
+  <section id="authGate" class="auth-gate" aria-label="客戶登入">
+    <div class="auth-card">
+      <p class="eyebrow">Customer Access</p>
+      <h1>彩燿門模擬器授權登入</h1>
+      <p class="auth-copy">請輸入我們提供的授權碼，系統會確認期限後開啟模擬器。</p>
+      <form id="accessKeyForm" class="auth-form">
+        <label>
+          <span>授權碼</span>
+          <input id="accessKeyInput" type="text" autocomplete="one-time-code" placeholder="例如：CY0001" required>
+        </label>
+        <button class="auth-submit" type="submit">開啟模擬器</button>
+      </form>
+      <p id="authMessage" class="auth-message" role="status">請輸入授權碼。</p>
+    </div>
+  </section>
+
+  <div id="appShell" class="page-shell">
     <header class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Door Design Visualizer</p>
+        <div class="hero-topline">
+          <p class="eyebrow">Door Design Visualizer</p>
+          <button class="ghost-button compact-button" id="logoutButton" type="button">清除授權</button>
+        </div>
         <h1>彩燿門 × UV局部彩繪點綴模擬器</h1>
         <p class="hero-text">
           操作流程：先選門板底色，再挑選局部點綴樣式，中央即時預覽完整套用效果。
@@ -113,5 +132,6 @@
 
   <script src="catalog.js"></script>
   <script src="app.js"></script>
+  <script type="module" src="firebase-gate.js"></script>
 </body>
 </html>
