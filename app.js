@@ -1,14 +1,16 @@
 const catalog = window.doorCatalog;
+const defaultPatternOverlayId = catalog.overlays.find((overlay) => overlay.id !== "none")?.id ?? "none";
 
 const state = {
   baseId: catalog.bases[0]?.id ?? "",
-  overlayId: "none",
+  overlayId: defaultPatternOverlayId,
   overlayMode: "pattern",
   lineColor: catalog.lineColors[0]?.id ?? "B",
   accessoryType: catalog.accessories[0]?.type ?? "",
   accessoryColor: catalog.accessoryColors[0]?.id ?? "white",
   selectedAccessoryInstanceId: "",
-  accessoryInstances: []
+  accessoryInstances: [],
+  previewZoom: 1
 };
 
 const baseOptions = document.getElementById("baseOptions");
@@ -27,15 +29,24 @@ const baseLabel = document.getElementById("baseLabel");
 const overlayLabel = document.getElementById("overlayLabel");
 const accessoryLabel = document.getElementById("accessoryLabel");
 const emptyOverlayBadge = document.getElementById("emptyOverlayBadge");
-const resetButton = document.getElementById("resetButton");
 const clearAccessoryButton = document.getElementById("clearAccessoryButton");
 const clearAllAccessoriesButton = document.getElementById("clearAllAccessoriesButton");
 const exportPngButton = document.getElementById("exportPngButton");
 const positionControls = document.getElementById("positionControls");
+const zoomOutButton = document.getElementById("zoomOutButton");
+const zoomInButton = document.getElementById("zoomInButton");
+const fitViewButton = document.getElementById("fitViewButton");
+const SNAP_THRESHOLD = 2.2;
+const MIN_PREVIEW_ZOOM = 0.72;
+const MAX_PREVIEW_ZOOM = 2.2;
+const PREVIEW_ZOOM_STEP = 0.16;
+const imageCache = new Map();
 
 const dragState = {
   active: false,
-  instanceId: ""
+  instanceId: "",
+  snapX: null,
+  snapY: null
 };
 
 function getBaseById(id) {
@@ -104,11 +115,125 @@ function updateAccessoryNodePosition(instance) {
   node.style.transform = `translate(-50%, -50%) rotate(${instance.rotation}deg)`;
 }
 
+function getAccessoryBounds(instance) {
+  const accessory = getAccessoryById(instance.accessoryId);
+  const scale = getAccessoryScale(accessory);
+
+  return {
+    centerX: instance.x,
+    centerY: instance.y,
+    left: instance.x - scale.width / 2,
+    right: instance.x + scale.width / 2,
+    top: instance.y - scale.height / 2,
+    bottom: instance.y + scale.height / 2
+  };
+}
+
+function findSnapDelta(points, targets) {
+  let best = null;
+
+  points.forEach((point) => {
+    targets.forEach((target) => {
+      const delta = target.value - point.value;
+      const distance = Math.abs(delta);
+
+      if (distance <= SNAP_THRESHOLD && (!best || distance < best.distance)) {
+        best = {
+          distance,
+          delta,
+          guide: target.guide
+        };
+      }
+    });
+  });
+
+  return best;
+}
+
+function applyAccessorySnap(instance) {
+  const bounds = getAccessoryBounds(instance);
+  const otherBounds = state.accessoryInstances
+    .filter((item) => item.instanceId !== instance.instanceId)
+    .map(getAccessoryBounds);
+
+  const xTargets = [
+    { value: 50, guide: 50 },
+    ...otherBounds.flatMap((item) => [
+      { value: item.left, guide: item.left },
+      { value: item.centerX, guide: item.centerX },
+      { value: item.right, guide: item.right }
+    ])
+  ];
+
+  const yTargets = [
+    { value: 50, guide: 50 },
+    ...otherBounds.flatMap((item) => [
+      { value: item.top, guide: item.top },
+      { value: item.centerY, guide: item.centerY },
+      { value: item.bottom, guide: item.bottom }
+    ])
+  ];
+
+  const xSnap = findSnapDelta(
+    [
+      { value: bounds.left },
+      { value: bounds.centerX },
+      { value: bounds.right }
+    ],
+    xTargets
+  );
+  const ySnap = findSnapDelta(
+    [
+      { value: bounds.top },
+      { value: bounds.centerY },
+      { value: bounds.bottom }
+    ],
+    yTargets
+  );
+
+  if (xSnap) {
+    instance.x = clamp(instance.x + xSnap.delta, 0, 100);
+    dragState.snapX = xSnap.guide;
+  } else {
+    dragState.snapX = null;
+  }
+
+  if (ySnap) {
+    instance.y = clamp(instance.y + ySnap.delta, 0, 100);
+    dragState.snapY = ySnap.guide;
+  } else {
+    dragState.snapY = null;
+  }
+}
+
+function updateSnapGuides() {
+  const verticalGuide = accessoryCanvas.querySelector('[data-snap-guide="vertical"]');
+  const horizontalGuide = accessoryCanvas.querySelector('[data-snap-guide="horizontal"]');
+
+  if (verticalGuide) {
+    verticalGuide.hidden = dragState.snapX === null;
+    verticalGuide.style.left = `${dragState.snapX ?? 0}%`;
+  }
+
+  if (horizontalGuide) {
+    horizontalGuide.hidden = dragState.snapY === null;
+    horizontalGuide.style.top = `${dragState.snapY ?? 0}%`;
+  }
+}
+
+function clearSnapGuides() {
+  dragState.snapX = null;
+  dragState.snapY = null;
+  updateSnapGuides();
+}
+
 function setAccessoryPositionFromPointer(event, instance) {
   const rect = doorFrame.getBoundingClientRect();
   instance.x = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
   instance.y = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
+  applyAccessorySnap(instance);
   updateAccessoryNodePosition(instance);
+  updateSnapGuides();
 }
 
 function moveAccessory(direction) {
@@ -159,6 +284,11 @@ function moveAccessory(direction) {
   syncActiveState();
 }
 
+function setPreviewZoom(value) {
+  state.previewZoom = clamp(value, MIN_PREVIEW_ZOOM, MAX_PREVIEW_ZOOM);
+  doorFrame.style.setProperty("--preview-zoom", state.previewZoom.toFixed(2));
+}
+
 function createCard(item, type) {
   if (type === "base") {
     const button = document.createElement("button");
@@ -168,7 +298,7 @@ function createCard(item, type) {
     button.dataset.type = type;
     button.innerHTML = `
       <div class="base-swatch-thumb">
-        <img src="${item.image}" alt="${item.name} 底圖縮圖">
+        <img src="${item.image}" alt="${item.name} 底圖縮圖" loading="eager" decoding="async">
       </div>
       <span class="base-swatch-label">${item.name}</span>
     `;
@@ -192,7 +322,7 @@ function createCard(item, type) {
 
   button.innerHTML = `
     <div class="card-thumb">
-      ${thumb ? `<img src="${thumb}" alt="${fallbackLabel}">` : `<div class="card-thumb placeholder"></div>`}
+      ${thumb ? `<img src="${thumb}" alt="${fallbackLabel}" loading="eager" decoding="async">` : `<div class="card-thumb placeholder"></div>`}
     </div>
     <div class="card-text">
       <span class="card-title">${item.name}</span>
@@ -258,7 +388,7 @@ function createLineColorButton(color) {
 
   button.addEventListener("click", () => {
     state.lineColor = color.id;
-    renderOverlayOptions();
+    updateLineOverlayImages();
     render();
   });
 
@@ -272,7 +402,7 @@ function createAccessoryCard(item) {
   button.dataset.id = item.id;
 
   button.innerHTML = `
-    <img src="${item.images[state.accessoryColor]}" alt="${item.name} 配件縮圖">
+    <img src="${item.images[state.accessoryColor]}" alt="${item.name} 配件縮圖" loading="lazy" decoding="async">
     <span>${item.name}</span>
   `;
 
@@ -305,7 +435,7 @@ function createLineOverlayCard(item) {
 
   button.innerHTML = `
     <div class="card-thumb">
-      <img src="${image}" alt="${item.name}">
+      <img src="${image}" alt="${item.name}" loading="lazy" decoding="async">
     </div>
     <div class="card-text">
       <span class="card-title">${item.name}</span>
@@ -359,8 +489,23 @@ function renderOverlayOptions() {
     return;
   }
 
-  catalog.overlays.forEach((overlay) => {
+  catalog.overlays.filter((overlay) => overlay.id !== "none").forEach((overlay) => {
     overlayOptions.appendChild(createCard(overlay, "overlay"));
+  });
+}
+
+function updateLineOverlayImages() {
+  if (state.overlayMode !== "line") {
+    return;
+  }
+
+  catalog.lineOverlays.forEach((line) => {
+    const card = overlayOptions.querySelector(`[data-id="${line.id}"]`);
+    const image = card?.querySelector("img");
+
+    if (image && line.images[state.lineColor]) {
+      image.src = line.images[state.lineColor];
+    }
   });
 }
 
@@ -445,6 +590,18 @@ function renderAccessories() {
     accessoryCanvas.appendChild(node);
     updateAccessoryNodePosition(instance);
   });
+
+  const verticalGuide = document.createElement("div");
+  verticalGuide.className = "snap-guide snap-guide-vertical";
+  verticalGuide.dataset.snapGuide = "vertical";
+  verticalGuide.hidden = true;
+
+  const horizontalGuide = document.createElement("div");
+  horizontalGuide.className = "snap-guide snap-guide-horizontal";
+  horizontalGuide.dataset.snapGuide = "horizontal";
+  horizontalGuide.hidden = true;
+
+  accessoryCanvas.append(verticalGuide, horizontalGuide);
 }
 
 function renderAccessorySummary() {
@@ -465,13 +622,63 @@ function renderAccessorySummary() {
   accessoryLabel.textContent = `${state.accessoryInstances.length} 件配件`;
 }
 
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
+function preloadImage(src) {
+  if (!src) {
+    return Promise.resolve(null);
+  }
+
+  if (imageCache.has(src)) {
+    return imageCache.get(src);
+  }
+
+  const imagePromise = new Promise((resolve, reject) => {
     const image = new Image();
-    image.onload = () => resolve(image);
+    image.decoding = "async";
+    image.onload = async () => {
+      if (typeof image.decode === "function") {
+        try {
+          await image.decode();
+        } catch (error) {
+          // Safari may reject decode() for already-loaded images; the image is still usable.
+        }
+      }
+
+      resolve(image);
+    };
     image.onerror = reject;
     image.src = src;
   });
+
+  imageCache.set(src, imagePromise);
+  return imagePromise;
+}
+
+function queueImagePreload(src) {
+  preloadImage(src).catch(() => {});
+}
+
+function preloadCatalogImages() {
+  const sources = new Set();
+
+  catalog.bases.forEach((base) => sources.add(base.image));
+  catalog.overlays.forEach((overlay) => {
+    if (overlay.image) {
+      sources.add(overlay.image);
+    }
+    if (overlay.preview) {
+      sources.add(overlay.preview);
+    }
+  });
+  catalog.lineOverlays.forEach((line) => {
+    if (line.images[state.lineColor]) {
+      sources.add(line.images[state.lineColor]);
+    }
+  });
+  sources.forEach(queueImagePreload);
+}
+
+function loadImage(src) {
+  return preloadImage(src);
 }
 
 function downloadCanvas(canvas, type) {
@@ -599,6 +806,7 @@ function render() {
   const selectedOverlayImage = state.overlayMode === "line" ? overlay?.images?.[state.lineColor] : overlay?.image;
 
   if (selectedOverlayImage) {
+    queueImagePreload(selectedOverlayImage);
     overlayImage.src = selectedOverlayImage;
     overlayImage.alt = `${overlay.name} 局部點綴`;
     overlayImage.classList.toggle("line-overlay", state.overlayMode === "line");
@@ -619,16 +827,10 @@ function render() {
     ? `${overlay.name} / ${getLineColorById(state.lineColor)?.name ?? ""}`
     : overlay.name;
   renderAccessorySummary();
+  setPreviewZoom(state.previewZoom);
 
   syncActiveState();
 }
-
-resetButton.addEventListener("click", () => {
-  state.overlayId = "none";
-  state.overlayMode = "pattern";
-  renderOverlayOptions();
-  render();
-});
 
 overlayModeOptions.addEventListener("click", (event) => {
   const button = event.target.closest("[data-overlay-mode]");
@@ -638,7 +840,7 @@ overlayModeOptions.addEventListener("click", (event) => {
   }
 
   state.overlayMode = button.dataset.overlayMode;
-  state.overlayId = state.overlayMode === "line" ? catalog.lineOverlays[0]?.id ?? "" : "none";
+  state.overlayId = state.overlayMode === "line" ? catalog.lineOverlays[0]?.id ?? "" : defaultPatternOverlayId;
   renderOverlayOptions();
   render();
 });
@@ -680,6 +882,18 @@ positionControls.addEventListener("click", (event) => {
   moveAccessory(button.dataset.move);
 });
 
+zoomOutButton.addEventListener("click", () => {
+  setPreviewZoom(state.previewZoom - PREVIEW_ZOOM_STEP);
+});
+
+zoomInButton.addEventListener("click", () => {
+  setPreviewZoom(state.previewZoom + PREVIEW_ZOOM_STEP);
+});
+
+fitViewButton.addEventListener("click", () => {
+  setPreviewZoom(1);
+});
+
 accessoryCanvas.addEventListener("pointermove", (event) => {
   if (!dragState.active) {
     return;
@@ -697,6 +911,7 @@ accessoryCanvas.addEventListener("pointerup", (event) => {
 
   dragState.active = false;
   dragState.instanceId = "";
+  clearSnapGuides();
   node?.releasePointerCapture(event.pointerId);
   node?.classList.remove("is-dragging");
   renderAccessorySummary();
@@ -707,8 +922,10 @@ accessoryCanvas.addEventListener("pointercancel", () => {
 
   dragState.active = false;
   dragState.instanceId = "";
+  clearSnapGuides();
   node?.classList.remove("is-dragging");
 });
 
 renderOptions();
 render();
+preloadCatalogImages();

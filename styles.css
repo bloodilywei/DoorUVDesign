@@ -288,6 +288,7 @@ h2 {
 }
 
 .door-stage {
+  position: relative;
   margin: 12px 0 12px;
   padding: 14px;
   border-radius: 16px;
@@ -320,12 +321,39 @@ h2 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  overflow: auto;
+}
+
+.preview-zoom-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgba(95, 72, 46, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 250, 244, 0.88);
+  box-shadow: 0 10px 24px rgba(76, 53, 29, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.preview-zoom-controls .ghost-button {
+  min-height: 32px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .full-door {
   width: min(100%, 176px);
   max-width: 176px;
   aspect-ratio: 70.3 / 200;
+  flex: 0 0 auto;
+  transform: scale(var(--preview-zoom, 1));
+  transform-origin: center center;
+  transition: transform 180ms ease;
 }
 
 .door-size-note {
@@ -406,6 +434,29 @@ h2 {
 .accessory-layer.is-selected {
   outline: 1px dashed rgba(155, 107, 61, 0.85);
   outline-offset: 2px;
+}
+
+.snap-guide {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0.78;
+}
+
+.snap-guide-vertical {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed rgba(155, 107, 61, 0.72);
+  transform: translateX(-0.5px);
+}
+
+.snap-guide-horizontal {
+  left: 0;
+  right: 0;
+  height: 1px;
+  border-top: 1px dashed rgba(155, 107, 61, 0.72);
+  transform: translateY(-0.5px);
 }
 
 .accessory-layer img {

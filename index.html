@@ -64,16 +64,20 @@
         <div class="preview-header">
           <div>
             <p class="section-kicker">即時預覽</p>
-            <h2 id="selectionTitle">白梣 x 無點綴</h2>
+            <h2 id="selectionTitle">白梣 x 樣式 01</h2>
           </div>
           <div class="preview-actions">
-            <button class="ghost-button" id="resetButton" type="button">清除局部點綴</button>
             <button class="ghost-button" id="clearAllAccessoriesButton" type="button">清除全部配件</button>
             <button class="ghost-button strong-action" id="exportPngButton" type="button">下載成圖片</button>
           </div>
         </div>
 
         <div class="door-stage full-preview">
+          <div class="preview-zoom-controls" aria-label="即時預覽縮放">
+            <button class="ghost-button" id="zoomOutButton" type="button">縮小</button>
+            <button class="ghost-button" id="zoomInButton" type="button">放大</button>
+            <button class="ghost-button" id="fitViewButton" type="button">顯示全圖</button>
+          </div>
           <div class="door-frame full-door">
             <img id="baseImage" class="door-layer fit-contain" alt="門板底圖">
             <img id="overlayImage" class="door-layer overlay fit-contain" alt="門板局部點綴">
@@ -93,7 +97,7 @@
           </div>
           <div>
             <span>局部點綴</span>
-            <strong id="overlayLabel">無點綴</strong>
+            <strong id="overlayLabel">樣式 01</strong>
           </div>
           <div>
             <span>配件</span>
